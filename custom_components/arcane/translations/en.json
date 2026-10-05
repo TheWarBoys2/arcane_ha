@@ -1,0 +1,88 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Arcane",
+        "description": "Create an API key in Arcane under Settings > API Keys. It needs to list environments and containers, and to start, stop, restart and redeploy containers if you want the buttons to work.",
+        "data": {
+          "url": "Arcane URL",
+          "api_key": "API key",
+          "verify_ssl": "Verify SSL certificate"
+        },
+        "data_description": {
+          "url": "The address you open Arcane on, for example http://your-arcane-ip:3552. Use an address Home Assistant itself can resolve.",
+          "api_key": "Starts with arc_."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Arcane API key",
+        "description": "Arcane at {url} stopped accepting the API key. Paste a new one.",
+        "data": {
+          "api_key": "API key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach Arcane at that address.",
+      "invalid_auth": "Arcane rejected the API key.",
+      "no_environments": "Arcane answered, but this API key can't see any environments.",
+      "unknown": "Arcane gave an unexpected answer. Check the Home Assistant log."
+    },
+    "abort": {
+      "already_configured": "This Arcane server is already set up.",
+      "reauth_successful": "The new API key works."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Arcane options",
+        "data": {
+          "scan_interval": "Update interval"
+        },
+        "data_description": {
+          "scan_interval": "How often to ask Arcane for container state, CPU and memory."
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "online": { "name": "Online" },
+      "update_available": { "name": "Update available" }
+    },
+    "button": {
+      "start": { "name": "Start" },
+      "stop": { "name": "Stop" },
+      "restart": { "name": "Restart" },
+      "redeploy": { "name": "Redeploy" }
+    },
+    "sensor": {
+      "running": { "name": "Running containers", "unit_of_measurement": "containers" },
+      "stopped": { "name": "Stopped containers", "unit_of_measurement": "containers" },
+      "total": { "name": "Total containers", "unit_of_measurement": "containers" },
+      "updates": { "name": "Updates available", "unit_of_measurement": "containers" },
+      "cpu": { "name": "CPU" },
+      "memory": { "name": "Memory" },
+      "state": {
+        "name": "State",
+        "state": {
+          "running": "Running",
+          "paused": "Paused",
+          "restarting": "Restarting",
+          "created": "Created",
+          "exited": "Exited",
+          "removing": "Removing",
+          "dead": "Dead",
+          "unknown": "Unknown"
+        }
+      }
+    }
+  },
+  "services": {
+    "start": { "name": "Start container", "description": "Starts a container through Arcane. Target the container's State sensor." },
+    "stop": { "name": "Stop container", "description": "Stops a container through Arcane. Target the container's State sensor." },
+    "restart": { "name": "Restart container", "description": "Restarts a container through Arcane. Target the container's State sensor." },
+    "redeploy": { "name": "Redeploy container", "description": "Pulls the image again and recreates the container through Arcane. Target the container's State sensor." }
+  }
+}

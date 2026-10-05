@@ -1,0 +1,36 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "update_available": { "default": "mdi:package-up" }
+    },
+    "button": {
+      "start": { "default": "mdi:play" },
+      "stop": { "default": "mdi:stop" },
+      "redeploy": { "default": "mdi:cloud-download-outline" }
+    },
+    "sensor": {
+      "running": { "default": "mdi:docker" },
+      "stopped": { "default": "mdi:stop-circle-outline" },
+      "total": { "default": "mdi:package-variant-closed" },
+      "updates": { "default": "mdi:package-up" },
+      "cpu": { "default": "mdi:cpu-64-bit" },
+      "memory": { "default": "mdi:memory" },
+      "state": {
+        "default": "mdi:docker",
+        "state": {
+          "running": "mdi:play-circle",
+          "paused": "mdi:pause-circle",
+          "restarting": "mdi:restart",
+          "exited": "mdi:stop-circle",
+          "dead": "mdi:alert-circle"
+        }
+      }
+    }
+  },
+  "services": {
+    "start": { "service": "mdi:play" },
+    "stop": { "service": "mdi:stop" },
+    "restart": { "service": "mdi:restart" },
+    "redeploy": { "service": "mdi:cloud-download-outline" }
+  }
+}

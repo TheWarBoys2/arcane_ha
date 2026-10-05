@@ -1,0 +1,20 @@
+start:
+  target:
+    entity:
+      integration: arcane
+      domain: sensor
+stop:
+  target:
+    entity:
+      integration: arcane
+      domain: sensor
+restart:
+  target:
+    entity:
+      integration: arcane
+      domain: sensor
+redeploy:
+  target:
+    entity:
+      integration: arcane
+      domain: sensor
