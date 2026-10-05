@@ -10,7 +10,7 @@
  * arcane_container, arcane_environment, cpu_percent, memory_usage and so on.
  */
 
-const CARD_VERSION = "0.1.0";
+const CARD_VERSION = "0.2.0";
 
 const SORTS = ["name", "state", "cpu", "memory"];
 const TAP_ACTIONS = ["restart", "more-info", "none"];
@@ -80,8 +80,14 @@ class ArcaneCard extends HTMLElement {
       tap_action: "restart",
       confirm: true,
       show_header: true,
+      show_column_headers: true,
+      compact: true,
+      columns: 1,
+      show_cpu: true,
+      show_memory: true,
       ...config,
     };
+    this._config.columns = Math.min(Math.max(parseInt(this._config.columns, 10) || 1, 1), 3);
     this._signature = "";
     if (this._hass) this._render();
   }
@@ -191,8 +197,27 @@ class ArcaneCard extends HTMLElement {
         </div>`
       : "";
 
+    const cfg = this._config;
+    const tracks = [
+      "auto",
+      cfg.compact ? "minmax(0, max-content)" : "minmax(0, 1fr)",
+      ...(cfg.show_cpu ? ["auto"] : []),
+      ...(cfg.show_memory ? ["auto"] : []),
+      cfg.compact ? "minmax(max-content, 1fr)" : "max-content",
+    ].join(" ");
+    const colHeaders = cfg.show_column_headers
+      ? `<div class="colhead"><span></span><span>Container</span>${cfg.show_cpu ? "<span class=\"num\">CPU</span>" : ""}${
+          cfg.show_memory ? "<span class=\"num\">RAM</span>" : ""
+        }<span></span></div>`
+      : "";
+    // Split into columns top-to-bottom, so names still read in sort order.
+    const perColumn = Math.ceil(rows.length / cfg.columns) || 1;
+    const chunks = [];
+    for (let i = 0; i < rows.length; i += perColumn) chunks.push(rows.slice(i, i + perColumn));
     const body = rows.length
-      ? rows.map((s) => this._rowHtml(s)).join("")
+      ? `<div class="lists" style="--arcane-cols: ${chunks.length}; --arcane-tracks: ${tracks}">${chunks
+          .map((chunk) => `<div class="list">${colHeaders}${chunk.map((s) => this._rowHtml(s)).join("")}</div>`)
+          .join("")}</div>`
       : `<div class="empty">${
           envId === null
             ? "No Arcane containers found. Is the Arcane integration set up?"
@@ -203,7 +228,7 @@ class ArcaneCard extends HTMLElement {
       <style>${STYLE}</style>
       <ha-card>
         ${header}
-        <div class="list">${body}</div>
+        ${body}
       </ha-card>`;
 
     this.shadowRoot.querySelectorAll(".row[data-entity]").forEach((el) => {
@@ -255,14 +280,13 @@ class ArcaneCard extends HTMLElement {
     const error = this._errors.get(s.entity_id);
     return `
       <div class="row${this._config.tap_action === "none" ? " static" : ""}" data-entity="${escapeHtml(s.entity_id)}">
-        <span class="dot ${dot}"></span>
-        <span class="name" title="${escapeHtml(a.image || "")}">${escapeHtml(a.arcane_container)}${
-          stateLabel ? ` <span class="state">${escapeHtml(stateLabel)}</span>` : ""
-        }</span>
-        <span class="badge-slot">${badge}</span>
-        <span class="metric cpu">${cpu}</span>
-        <span class="metric mem">${mem}</span>
-        <ha-icon class="info" icon="mdi:information-outline" data-info="${escapeHtml(s.entity_id)}"></ha-icon>
+        <span class="dot-cell"><span class="dot ${dot}"></span></span>
+        <span class="name" title="${escapeHtml(a.image || "")}"><span class="label">${escapeHtml(a.arcane_container)}</span>${
+          stateLabel ? `<span class="state">${escapeHtml(stateLabel)}</span>` : ""
+        }${badge}</span>
+        ${this._config.show_cpu ? `<span class="metric cpu">${cpu}</span>` : ""}
+        ${this._config.show_memory ? `<span class="metric mem">${mem}</span>` : ""}
+        <span class="info-cell"><ha-icon class="info" icon="mdi:information-outline" data-info="${escapeHtml(s.entity_id)}"></ha-icon></span>
       </div>
       ${confirm}
       ${error ? `<div class="error">${escapeHtml(error)}</div>` : ""}`;
@@ -270,33 +294,52 @@ class ArcaneCard extends HTMLElement {
 }
 
 const STYLE = `
-  ha-card { padding: 12px 0 8px; }
+  ha-card { display: block; padding: 12px 0 8px; container-type: inline-size; }
   .header { display: flex; align-items: baseline; justify-content: space-between; padding: 0 16px 8px; gap: 8px; }
   .title { font-size: 1.2em; font-weight: 500; color: var(--primary-text-color); }
   .summary { font-size: 0.9em; color: var(--secondary-text-color); white-space: nowrap; }
   .upd-text { color: var(--info-color, #4a8fd4); }
-  .row {
-    display: grid; grid-template-columns: 12px minmax(0, 1fr) auto 3.6em 4.6em 24px;
-    align-items: center; gap: 10px; padding: 6px 16px; cursor: pointer; min-height: 32px;
+  .lists { display: grid; grid-template-columns: repeat(var(--arcane-cols, 1), minmax(0, 1fr)); column-gap: 8px; }
+  .list { display: grid; grid-template-columns: var(--arcane-tracks); align-items: center; align-content: start; }
+  /* Too narrow for side-by-side lists: merge them into one aligned list. */
+  @container (max-width: 560px) {
+    .lists { grid-template-columns: var(--arcane-tracks); align-items: center; column-gap: 0; }
+    .list { display: contents; }
+    .list + .list .colhead { display: none; }
   }
+  .row, .colhead { display: contents; }
+  .row > *, .colhead > * { padding: 6px 0 6px 12px; min-height: 20px; display: flex; align-items: center; }
+  .row > :first-child, .colhead > :first-child { padding-left: 16px; }
+  .row > :last-child, .colhead > :last-child { padding-right: 12px; }
+  .colhead > * {
+    font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--secondary-text-color);
+    padding-top: 0; padding-bottom: 4px; border-bottom: 1px solid var(--divider-color);
+  }
+  .colhead > .num { justify-content: flex-end; }
+  .row { cursor: pointer; }
   .row.static { cursor: default; }
-  .row:hover { background: var(--secondary-background-color); }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--disabled-color, #8a8272); }
-  .dot.up { background: var(--success-color, #43a047); }
-  .dot.busy { background: var(--warning-color, #d38b3a); }
-  .dot.down { background: var(--error-color, #c4553f); }
+  .row:hover > * { background: var(--secondary-background-color); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--disabled-color, #8a8272); flex: none; }
+  .dot.up { background-color: var(--success-color, #43a047); }
+  .dot.busy { background-color: var(--warning-color, #d38b3a); }
+  .dot.down { background-color: var(--error-color, #c4553f); }
   .dot.pulse { animation: pulse 1s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: 0.3; } }
-  .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--primary-text-color); }
-  .state { font-size: 0.8em; color: var(--secondary-text-color); }
+  .name { gap: 6px; min-width: 0; color: var(--primary-text-color); }
+  .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .state { font-size: 0.8em; color: var(--secondary-text-color); white-space: nowrap; }
   .badge {
-    font-size: 0.72em; padding: 1px 7px; border-radius: 9px; text-transform: uppercase; letter-spacing: 0.04em;
-    background: var(--info-color, #4a8fd4); color: var(--text-primary-color, #fff);
+    font-size: 0.68em; padding: 1px 6px; border-radius: 9px; text-transform: uppercase; letter-spacing: 0.04em;
+    background: var(--info-color, #4a8fd4); color: var(--text-primary-color, #fff); white-space: nowrap; flex: none;
   }
-  .metric { text-align: right; font-variant-numeric: tabular-nums; font-size: 0.9em; color: var(--secondary-text-color); }
+  .metric {
+    justify-content: flex-end; font-variant-numeric: tabular-nums; font-size: 0.9em;
+    color: var(--secondary-text-color); white-space: nowrap;
+  }
+  .info-cell { justify-content: flex-end; }
   .info { --mdc-icon-size: 18px; color: var(--secondary-text-color); cursor: pointer; }
   .confirm {
-    display: flex; align-items: center; gap: 8px; padding: 4px 16px 8px 38px; font-size: 0.9em;
+    grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding: 4px 12px 8px 38px; font-size: 0.9em;
     color: var(--primary-text-color);
   }
   .confirm span { flex: 1; }
@@ -305,7 +348,7 @@ const STYLE = `
     border-radius: 6px; padding: 4px 10px; cursor: pointer;
   }
   .confirm button.go { background: var(--primary-color); color: var(--text-primary-color, #fff); border-color: var(--primary-color); }
-  .error { padding: 0 16px 6px 38px; font-size: 0.85em; color: var(--error-color, #c4553f); }
+  .error { grid-column: 1 / -1; padding: 0 12px 6px 38px; font-size: 0.85em; color: var(--error-color, #c4553f); }
   .empty { padding: 8px 16px; color: var(--secondary-text-color); }
 `;
 
@@ -368,9 +411,32 @@ class ArcaneCardEditor extends HTMLElement {
         type: "grid",
         name: "",
         schema: [
+          {
+            name: "columns",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "1", label: "1" },
+                  { value: "2", label: "2" },
+                  { value: "3", label: "3" },
+                ],
+              },
+            },
+          },
+          { name: "compact", selector: { boolean: {} } },
+        ],
+      },
+      {
+        type: "grid",
+        name: "",
+        schema: [
+          { name: "show_cpu", selector: { boolean: {} } },
+          { name: "show_memory", selector: { boolean: {} } },
+          { name: "show_column_headers", selector: { boolean: {} } },
+          { name: "show_header", selector: { boolean: {} } },
           { name: "show_stopped", selector: { boolean: {} } },
           { name: "confirm", selector: { boolean: {} } },
-          { name: "show_header", selector: { boolean: {} } },
         ],
       },
     ];
@@ -389,11 +455,17 @@ class ArcaneCardEditor extends HTMLElement {
           filter: "Only show containers whose name contains",
           show_stopped: "Show stopped containers",
           confirm: "Ask before restarting",
-          show_header: "Show header",
+          show_header: "Show title and summary",
+          show_column_headers: "Show column headings",
+          columns: "Columns",
+          compact: "Compact (stats next to the name)",
+          show_cpu: "Show CPU",
+          show_memory: "Show RAM",
         })[s.name] || s.name;
       this._form.addEventListener("value-changed", (ev) => {
         const config = { ...ev.detail.value };
         for (const key of ["title", "filter"]) if (config[key] === "") delete config[key];
+        if (config.columns !== undefined) config.columns = parseInt(config.columns, 10) || 1;
         this._config = config;
         this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
       });
@@ -407,7 +479,12 @@ class ArcaneCardEditor extends HTMLElement {
       tap_action: "restart",
       confirm: true,
       show_header: true,
+      show_column_headers: true,
+      compact: true,
+      show_cpu: true,
+      show_memory: true,
       ...this._config,
+      columns: String(this._config.columns ?? 1),
     };
   }
 }

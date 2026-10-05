@@ -76,6 +76,9 @@ The card loads automatically once the integration is set up. To add it, edit a d
 - **Sort by**: name, state, CPU or memory
 - **Tapping a container**: restart it (or start it if it's stopped), show its details, or nothing
 - **Ask before restarting**: on by default
+- **Columns**: split the list into 1, 2 or 3 side-by-side columns (they merge back into one on a narrow card)
+- **Compact**: on by default, keeps CPU and RAM right next to the name instead of pushed to the far edge
+- **Show CPU**, **Show RAM**, **Show column headings**, **Show title and summary**
 - **Show stopped containers**, **Only show containers whose name contains…**, **Title**
 
 Each row has a status dot (green running, orange restarting/paused/unhealthy, red stopped), CPU, memory, and a blue **UPDATE** badge when a newer image is waiting. The ⓘ icon opens the container's details.
@@ -89,6 +92,11 @@ sort: cpu
 tap_action: restart     # restart | more-info | none
 confirm: true
 show_stopped: true
+columns: 1              # 1, 2 or 3
+compact: true           # stats next to the name
+show_column_headers: true
+show_cpu: true
+show_memory: true
 # filter: plex
 # exclude: [arcane, socket-proxy]
 # title: My server
