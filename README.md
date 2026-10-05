@@ -107,5 +107,6 @@ If the card doesn't appear right after installing, hard-refresh the browser (Ctr
 
 ```bash
 pip install -r requirements_test.txt
+pip install "$(python -c "import json, pathlib, homeassistant.components.frontend as f; print(json.loads((pathlib.Path(f.__file__).parent / 'manifest.json').read_text())['requirements'][0])")"
 pytest
 ```
